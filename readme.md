@@ -1,6 +1,6 @@
 # The Project
 
-This is a docgen that uses the LuaLS Lua comments annotations
+This is a docgen that uses the LuaCATS comment annotations
 to generate machine-readable documentation for the Luv library.
 
 The reason I am using the annotations to generate this instead of parsing the markdown has to do with multiple reasons, but a main one is the completeness this provides.  If we parse the markdown into a Lua table, that would at most be useful to regenerate the markdown docs and stop at that, it would be *very* challenging to convert it into something usable in a language server and even then it would be a sub-optimal experience.
@@ -20,6 +20,40 @@ I feel like this is something a proper parameter annotation can solve, for examp
 
 B) How do we represent the sync/async functions? More specifically, how do we express that passing the callback would have different returns than if the callback wasn't passed?
 
+C) In many places in the docs, if the parameter is a table its fields will be listed in the description, since we have aliases in the annotations, documenting those tables using aliases and then using the alias for the parameter type we can make the language server list those fields in the description of the method.
+For example description of `uv.tty_set_mode` in the markdown docs look like this:
+```md
+Set the TTY using the specified terminal mode.
+
+Parameter `mode` is a C enum with the following values:
+
+  - 0 - UV_TTY_MODE_NORMAL: Initial/normal terminal mode
+  - 1 - UV_TTY_MODE_RAW: Raw input mode (On Windows, ENABLE_WINDOW_INPUT is
+  also enabled)
+  - 2 - UV_TTY_MODE_IO: Binary-safe I/O mode for IPC (Unix-only)
+```
+While in the annotations, we change this description to be this:
+```lua
+---
+---Set the TTY using the specified terminal mode.
+---
+---Parameter `mode` is a C enum with the values below.
+---
+---@param tty uv_tty_t
+---@param mode uv.aliases.tty_mode
+...
+```
+This was done because otherwise the tty_mode values would be duplicated in the description for the user.  I think it would be *really* cool to have a way to use aliases inside the description itself, for example something like this:
+```lua
+---
+---Set the TTY using the specified terminal mode.
+---
+---Parameter `mode` is a C enum with the following values:
+---<!@alias uv.aliases.tty_mode>
+---
+---And continue on with the description, etc...
+```
+Fun fact: The `<! >` format is something that took me some effort to find! It is something that the LuaLS will completely ignore allowing you to have LuaCAT comments inside the LuaCAT descriptions!  I believe it is an unintended side effect of allowing HTML-like tags, likely something on VSCode only.
 
 ## Roadmap
 
@@ -108,7 +142,7 @@ class but are related. Such as the "Event loop" and "Miscellaneous utils" sectio
 that isn't a function, such as the `uv.constants` and `uv.errno` tables.
 
 I said that technically there are 3 types not 4, because currently the constants
-are under the "Module Layout", I want to change this upstream: put all constants under one section. There are only two constant values, `constants` and `errno` which are tables.
+are scattered under different sections (errno in "Error handling" and constants in "Module Layout"), I want to change this upstream: put all constants under one section. There are only two constant values, `constants` and `errno` which are tables.
 
 Currently I am thinking of the following format: an array of
 tables, each table entry represents a section that has one of the previous types,
