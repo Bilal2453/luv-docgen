@@ -16,7 +16,7 @@ Currently I am working on the parser, and I can see potential issues coming up.
 
 A) What do we do with the overloads when generating? Merge them into one function? Assume overloads don't exists, they aren't used, how do we represent complicated parameter situations? Like for example `uv.fs_symlink(path, new_path, [flags], [callback])` where the `flags` parameters can be completely omitted and would be treated as the callback `uv.fs_symlink(path, new_path, callback)`.  A potential solution in this scenario would be to have an `omitable` field in the `flags` parameter, but what if there was something even more complicated, like a parameter that could be omitted only if a specific parameter is not provided or is of a specific value.
 
-I feel like this is something a proper parameter annotation can solve, for example when you have a function where no arguments are omitable it would be annotated like `uv.foo(a1, [a1, [, a3]])`, this implies that in order to use `a3` you must pass something to `a1` while `uv.foo(a1, [a2], [a3])` would imply that `a2` is omitable and in order to provide `a3` you can simply do `uv.foo("a1", "a3")`. But it still isn't clear how to structure this, nor is this the format the markdown luv docs follow making detecting when a parameter is omitable ambiguous.
+I feel like this is something a proper parameter annotation can solve, for example when you have a function where no arguments are omitable it would be annotated like `uv.foo(a1, [a2, [, a3]])`, this implies that in order to use `a3` you must pass something to `a2` while `uv.foo(a1, [a2], [a3])` would imply that `a2` is omitable and in order to provide `a3` you can simply do `uv.foo("a1", "a3")`. But it still isn't clear how to structure this, nor is this the format the markdown luv docs follow making detecting when a parameter is omitable impossible.
 
 B) How do we represent the sync/async functions? More specifically, how do we express that passing the callback would have different returns than if the callback wasn't passed?
 
@@ -53,7 +53,7 @@ This was done because otherwise the tty_mode values would be duplicated in the d
 ---
 ---And continue on with the description, etc...
 ```
-Fun fact: The `<! >` format is something that took me some effort to find! It is something that the LuaLS will completely ignore allowing you to have LuaCAT comments inside the LuaCAT descriptions!  I believe it is an unintended side effect of allowing HTML-like tags, likely something on VSCode only.
+Fun fact: The `<! >` format is something that took me some effort to find! It is something that the LuaLS will completely ignore allowing you to have LuaCAT S comments inside the LuaCATS descriptions!  I believe it is an unintended side effect of allowing HTML-like tags, likely something on VSCode only.
 
 ## Roadmap
 
@@ -103,7 +103,7 @@ You can probably tell what a chunk is by simply looking at the `uv` annotations,
 > Different chunks MUST be seperated by two or more line endings.
 >
 > There MUST exists a trailing `\n` character (line ending) at the end of the string
-> of the annotations (at the end the meta annotation file).
+> of the annotations (at the end of the meta annotation file).
 >
 > The order in which the chunks are defined is always preserved
 > and therefor does matter.
@@ -125,7 +125,7 @@ of those sections:
 - "Text Section": Contains text only chunks, this is mainly the introduction
 of luv and the map of content at the very beginning.
 
-- "Class Sections": This is most of the docs, a section for each class
+- "Class Section": This is most of the docs, a section for each class
 luv has to offer, consists of 3 main sub-sections:
   - A list of classes it inherits from. 
   - A descrption.
@@ -143,6 +143,7 @@ that isn't a function, such as the `uv.constants` and `uv.errno` tables.
 
 I said that technically there are 3 types not 4, because currently the constants
 are scattered under different sections (errno in "Error handling" and constants in "Module Layout"), I want to change this upstream: put all constants under one section. There are only two constant values, `constants` and `errno` which are tables.
+
 
 Currently I am thinking of the following format: an array of
 tables, each table entry represents a section that has one of the previous types,
@@ -180,7 +181,7 @@ Note: replace any `::Type::` with the table defined below this block with the sa
     description = "...",
     aliases = ::Aliases::,
     methods = ::Methods::,
-    source = nil or "where in the C code is this section defined?",
+    source = nil or "where in the C code is this section defined?", -- TBD
   },
 
   {
@@ -227,8 +228,9 @@ Individual types:
 -- from the "class" table.
 {
   {
-    name = "the name of the function, without uv., without the class name if any",
+    name = "the name of the function, without uv., without the class name if any, without ()",
     description = "...",
+    method_form = nil or "class:name" -- for example "udp:send"
     params = {
       -- an array of tables that represent parameters
       -- in the order they are defined in
