@@ -211,8 +211,15 @@ Individual types:
 {
   {
     name = "the name of the alias",
-    value = "A string of the alias",
-    -- TODO: do we want a "types" field that holds an array of alias types?
+    types = {
+      -- an array of all types/values of this alias
+      -- for when the ---| is used an alias
+      {
+        type = "table<string, integer[]>",
+        default = nil or true, -- whether this alias option is a default (indicated with a > as in `---|> value`)
+        description = nil or '...',
+      }
+    },
   },
 
   ...
