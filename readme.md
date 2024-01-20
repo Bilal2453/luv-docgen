@@ -59,13 +59,18 @@ Fun fact: The `<! >` format is something that took me some effort to find! It is
 
 There are 4 stages that needs to be done:
 
-[x] Tokenization.
+- [x] Tokenization.
 
-[ ] Parsing.
+- [*] Parsing.
+  - [done] parsing text sections.
+  - [done] parsing classes (without methods).
+  - [done] parsing aliases.
+  - [*] parsing methods and functions.
+  - [ ] parsing overloads.
 
-[ ] Preprocessing.
+- [ ] Preprocessing.
 
-[ ] Generating.
+- [ ] Generating.
 
 ### Tokenization
 
@@ -170,7 +175,7 @@ Note: replace any `::Type::` with the table defined below this block with the sa
     parents = {
       -- an array of the names of classes this
       -- class inherits from. Empty if none.
-      "p1", "p2", "etc
+      "p1", "p2", "etc",
     },
     methods = ::Methods:: -- a list of tables representing each method
   },
@@ -195,8 +200,9 @@ Note: replace any `::Type::` with the table defined below this block with the sa
         name = "errno",
         type = "table", -- I think we should only support tables
         value = "TODO: should this be a string value that holds a table representation or an actual table?",
-      }
-    }
+      },
+      ...
+    },
   },
   
   ...
@@ -218,7 +224,8 @@ Individual types:
         type = "table<string, integer[]>",
         default = nil or true, -- whether this alias option is a default (indicated with a > as in `---|> value`)
         description = nil or '...',
-      }
+      },
+      ...
     },
   },
 
