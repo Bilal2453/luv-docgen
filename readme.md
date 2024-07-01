@@ -62,9 +62,9 @@ There are 4 stages that needs to be done:
 - [x] Tokenization.
 
 - [*] Parsing.
-  - [done] parsing text sections.
-  - [done] parsing classes (without methods).
-  - [done] parsing aliases.
+  - [x] parsing text sections.
+  - [x] parsing classes (without methods).
+  - [x] parsing aliases.
   - [*] parsing methods and functions.
   - [ ] parsing overloads.
 
