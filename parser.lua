@@ -1,3 +1,5 @@
+local re = require("re")
+
 local insert = table.insert
 
 ---Output a warning to stdout.
@@ -77,33 +79,31 @@ local function parseDesc(val)
   return trim(content or val), trim(desc)
 end
 
--- Another semi-working parser for union types
+local types_grammar = re.compile [=[
+  types_capture <- {| types |}
+  types <- %s* type %s* (optional / ('|' types))?
+  type <- {| {:type: bracket_literal / value_literal :} |}
+
+  optional <- {| {:type: '?' -> 'nil' :} |}
+
+  value_literal <- number_literal / string_literal
+  string_literal <- [^ ~!@#$%^&(){}/\;:,?]+
+  number_literal <- '-'? [0-9]+
+
+  bracket_literal <- {~ table_literal / array_literal / tuple_literal / fun_literal ~}
+  table_literal <- '{' (bracket_literal / [^}])* '}'
+  array_literal <- '[' (bracket_literal / [^]])* ']'
+  tuple_literal <- '<' (bracket_literal / [^>])* '>'
+  fun_literal   <- 'fun' %s* '(' (bracket_literal / [^)])* ')'
+]=]
+
+-- Parse union types into indivisual entries
 -- ie turns `"string | integer[] | table<a, b>"` into 3 different entries.
--- this works as long as:
--- A) a non-valid character isn't used for types.
--- B) the `|` character is not used for any other purpose (such as inside quotes).
--- ie fails on: `@param name integer | "|" | &invalid-type`.
 ---@return {type: string}[]
-local function parseTypes(content, types)
-  types = types or {}
-  if not content or trim(content) == '' then
-    return types
-  end
-  for type in content:gmatch('[^|]+') do
-    type = trim(type)
-    if type:match('%?$') then
-      type = type:gsub('%?$', '')
-      insert(types, {type = type})
-      insert(types, {type = 'nil'})
-      -- the question mark must be the last thing in the type
-      -- indicating an explicit stop of the parser
-      break
-    elseif type ~= '' then
-      insert(types, {type = type})
-    end
-  end
-  return types
+local function parseTypes(content)
+  return types_grammar:match(content)
 end
+p(parseTypes("inb_4-2.etc | integer | {foo: fun(a: integer | string[])?, bar: integer | [1, 2, 3]}? | Class.Ignored"))
 
 
 local function parseClass(val)
