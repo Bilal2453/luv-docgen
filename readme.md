@@ -59,7 +59,7 @@ Fun fact: The `<! >` format is something that took me some effort to find! It is
 
 There are 4 stages that needs to be done:
 
-- [x] Tokenization.
+- [x] Scanning.
 
 - [*] Parsing.
   - [x] parsing text sections.
@@ -72,13 +72,13 @@ There are 4 stages that needs to be done:
 
 - [ ] Generating.
 
-### Tokenization
+### Scanning
 
-In this stage, we tokenize the annotations string into a Lua array containing what's called chunks which will be later used by the parser.
+In this stage, we scan the file for annotations and insert them into a Lua array containing what's called chunks which will be later used by the parser.
 
 The output of this process is an array that contains string arrays, each sub-array represent a "chunk", or a section of the annotations.
 
-A chunk of annotations is any number of Lua comments that all of which starts with 3 dashes `---` and has only one line ending seperating the comment lines, followed by any number of Lua code lines, often function definitions and assignments.
+A chunk of annotations is any number of Lua comments that all of which starts with 3 dashes `---` and has only one line ending separating the comment lines, followed by any number of Lua code lines, often function definitions and assignments.
 The chunk is terminated on the first occurrence of `\n\n` or on the occurrence of the next chunk which start at the next three dashes comment `---`.
 
 For example the following block has two chunks
@@ -102,10 +102,10 @@ You can probably tell what a chunk is by simply looking at the `uv` annotations,
 
 > A line ending character MUST be `\n`.
 >
-> Lines arranging a single chunk MUST NOT be seperated
+> Lines arranging a single chunk MUST NOT be separated
 > by more than one line ending.
 >
-> Different chunks MUST be seperated by two or more line endings.
+> Different chunks MUST be separated by two or more line endings.
 >
 > There MUST exists a trailing `\n` character (line ending) at the end of the string
 > of the annotations (at the end of the meta annotation file).
@@ -113,27 +113,27 @@ You can probably tell what a chunk is by simply looking at the `uv` annotations,
 > The order in which the chunks are defined is always preserved
 > and therefor does matter.
 
-See tokenizer.lua for the LPeg grammar and more details.
+See scanner.lua for the LPeg grammar and more details.
 
 ### Parsing
 
-Using the tokenized chunks to generate something that represent
-the docs layout much more closely. This is an intermidate form
+Using the scanned chunks to generate something that represent
+the docs layout much more closely. This is an intermediate form
 that doesn't necessarily represent the final generated structure.
 
 To make the parser, we need to understand what does the luv docs consists of,
 what are the main sections/parts and what are those composed of.
 
 The luv docs are composed out of sections, there are 4 (technically 3) types
-of those sections: 
+of those sections:
 
 - "Text Section": Contains text only chunks, this is mainly the introduction
 of luv and the map of content at the very beginning.
 
 - "Class Section": This is most of the docs, a section for each class
 luv has to offer, consists of 3 main sub-sections:
-  - A list of classes it inherits from. 
-  - A descrption.
+  - A list of classes it inherits from.
+  - A description.
   - A list of the methods, along with their params, returns and notes.
 
 - "Functions Section": A group of functions that don't belong to any specific

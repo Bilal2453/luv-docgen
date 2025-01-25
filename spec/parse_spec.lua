@@ -1,5 +1,5 @@
 
-local chunks = require'tokenizer' [==[
+local chunks = require'scanner' [==[
 ---The main section of this entire world.
 ---@section Main
 ---Contains the class of the main universe in the main galaxy.

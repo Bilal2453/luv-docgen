@@ -1,13 +1,13 @@
--- Tokenize the annotations into sections
--- this is a first run of this tokenizer
--- the aim is by the end of this to have a tokenizer
+-- Scan the input into annotation sections
+-- this is a first run of this scanner
+-- the aim is by the end of this to have a scanner
 -- the works for all of luvit-meta.
 -- Depends on LPeg.
 
--- The tokenizer works on chunks of annotations
+-- The scanner works on chunks of annotations
 -- a chunk of annotation is any number of adjacent lines
 -- starting with three dashes `---` followed by
--- any number of Lua code, often function deftinion.
+-- any number of Lua code, often function definition.
 -- The next chunk starts at the next three dashes.
 -- For example the following block has two chunks
 --[[
@@ -25,24 +25,24 @@ object.magicalMethod = magic1
 function ignored() end
 ]]
 
--- Lines inside a single chunk MUST NOT be seperated
+-- Lines inside a single chunk MUST NOT be separated
 -- by more than one line ending.
 
 -- A line ending character MUST be `\n`.
 
--- Chunks MUST be seperated by two or more line endings.
+-- Chunks MUST be separated by two or more line endings.
 
 -- There MUST exists a trailing line ending at the end of the string
 -- of the annotations (at the end the annotations file).
 
 -- The order in which the chunks are defined is always preserved.
 
--- TODO: a rundown of the tokenization process
+-- TODO: a rundown of the scanning process
 -- expected inputs and outputs
 
 local compile = require('re').compile
 
-local CHUNK_GRAMMAR = compile [[
+local CHUNK_GRAMMAR = compile[[
   chunks  <- {| chunk+ |}
   chunk   <- {| comment+ line* |} / continue
   comment <- {'---'  [^%nl]* } %nl
