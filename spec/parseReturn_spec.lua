@@ -38,15 +38,15 @@ assert.same(parseReturn('long-alias.less_important'), {
 })
 end
 
-do -- multi-returns
-  assert.same(parseReturn('first-return with_name, second.return, third_return'), {
-    types = {
-      {type = "long-alias.less_important"},
-    },
-    name = '',
-    nilable = false,
-  })
-end
+-- do -- multi-returns
+--   assert.same(parseReturn('first-return with_name, second.return, third_return'), {
+--     types = {
+--       {type = "long-alias.less_important"},
+--     },
+--     name = '',
+--     nilable = false,
+--   })
+-- end
 
 -- multi-returns
 do

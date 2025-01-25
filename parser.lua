@@ -1,6 +1,11 @@
 local re = require("re")
 
 local insert = table.insert
+local defs = {}
+
+local function compile(def)
+  return re.compile(def, defs)
+end
 
 ---Output a warning to stdout.
 ---Sadly, those warnings are often ambiguous,
@@ -20,6 +25,23 @@ local function trim(str)
     return str
   end
   return (str:gsub('^%s*', ''):gsub('%s*$', ''))
+end
+
+---Merge the array portion of table b into table a.
+---Returns table a.
+---@generic T: table
+---@param a T?
+---@param b table?
+---@return T
+local function mergeArray(a, b)
+  a = a or {}
+  if b then
+    local len = #a
+    for i = 1, #b do
+      a[len + i] = b[i]
+    end
+  end
+  return a
 end
 
 
@@ -79,12 +101,11 @@ local function parseDesc(val)
   return trim(content or val), trim(desc)
 end
 
-local types_grammar = re.compile [=[
-  types_capture <- {| types |}
-  types <- %s* type %s* (optional / ('|' types))?
-  type <- {| {:type: bracket_literal / value_literal :} |}
+defs.optional = compile[[optional <- {| {:type: '?' -> 'nil' :} |}]]
+defs.description = compile[[description <- '#'? %s* {:description: .+ :}]]
 
-  optional <- {| {:type: '?' -> 'nil' :} |}
+defs.type = compile[=[
+  type <- {| {:type: bracket_literal / value_literal :} |}
 
   value_literal <- number_literal / string_literal
   string_literal <- [^ ~!@#$%^&(){}/\;:,?]+
@@ -97,14 +118,15 @@ local types_grammar = re.compile [=[
   fun_literal   <- 'fun' %s* '(' (bracket_literal / [^)])* ')'
 ]=]
 
--- Parse union types into indivisual entries
--- ie turns `"string | integer[] | table<a, b>"` into 3 different entries.
----@return {type: string}[]
-local function parseTypes(content)
-  return types_grammar:match(content)
-end
-p(parseTypes("inb_4-2.etc | integer | {foo: fun(a: integer | string[])?, bar: integer | [1, 2, 3]}? | Class.Ignored"))
+defs.types = compile[[
+  types_capture <- {| types |}
+  types <- %s* %type %s* (%optional / ('|' types))?
+]]
 
+---@return table?
+local function parseTypes(content)
+  return defs.types:match(content)
+end
 
 local function parseClass(val)
   local name, inheritance = val:match('([^ :]+)%s*:?%s*(.*)')
@@ -136,61 +158,21 @@ local function parseParam(val)
   }
 end
 
+defs.ret = compile[[
+  ret <- {| %type %s* %optional? name? %s* |}
+  name <- {:name: ('_' / [%P%S%D]) ([^%p%s] / [._])* :}
+]]
+defs.returns = compile[[
+  returns <- {| %ret (%s* ',' %s* %ret)* %description? |}
+]]
+
 ---@param val string
 local function parseReturn(val)
-  --[[ Take a deep breath... this is a ride
-    calculate the last position of an "illegal" character
-    and truncate it from the name, split the remaining by
-    both | and space, if two tokens are not seperated by
-    a | character, truncate the first one into type strings
-    and treat the remaining as the name, otherwise continue
-    until we find the last remaining term if it does exists.
-    This is *some type* of "static analysis" that lets us
-    do this parsing with having to actually properly parse it!
-    
-    Take for example the input "{[string]: integer} | string | integer value_rtn"
-    1: `}` is the last illegal character that can be found, truncate
-      the input into just "| string | integer value_rtn".
-      The truncated string is going to be the types!
-    2: split by `|`, we get {'', 'string', 'integer value_rtn'}.
-    3: add all entries to the types string, consider the last entry.
-    4: split the last entry by spaces, we get {'integer', 'value_rtn'}
-    5: if we only got one entry back, that is a type, if we get a second
-      that is going to be the name (we ignore the rest!).
-  ]]
-
-  -- TODO MAIN: I just realized we have to support multi returns
+  -- TODO MAIN 2: I just realized we have to support multi returns
 
   -- truncate the description first
-  local body, description = parseDesc(val)
-  -- try to find the position of the last illegal char if any
-  local type_str, remaining = body:match('(.+[%[%]{}<>:"\'`]%s*%??)(.*)')
-  local rem_types, name
-  if body:find('|') then
-    rem_types, name = (remaining or body):match('(.+|%s*[^ ]+)%s*([^ ]*)')
-  else
-    rem_types, name = (remaining or body):match('(.+)%s+([^ ]*)')
-  end
-  if not type_str and not rem_types then
-    type_str = body
-  end
-  name = name or trim(remaining)
-
-  local types = {}
-  parseTypes(type_str, types)
-  parseTypes(rem_types, types)
-
-  local isNilable = false
-  for _, t in ipairs(types) do
-    if t.type == 'nil' then
-      isNilable = true
-      break
-    end
-  end
-
-  if name and name:find(',') then
-    print("multi-return detected in ", name)
-  end
+  -- local body, description = parseDesc(val)
+  p(defs.returns:match(val))
 
   return {
     name = name or '',
@@ -199,6 +181,8 @@ local function parseReturn(val)
     description = description,
   }
 end
+-- parseReturn("string? name_com.org, integer name2 hello world")
+-- os.exit()
 
 -- Note: I wanted to use this grammar to parse aliases but then I realized
 -- it wouldn't work, as I would need to handle a ton of special cases
@@ -496,7 +480,7 @@ local function parse(chunks)
       insert(section.aliases, parsed_chunk.value)
     -- elseif parsed_chunk.type == "functions" then
     end
-    -- TODO MAIN: parse function groups, classes methods and overloads
+    -- TODO MAIN 3: parse function groups, classes methods and overloads
 
     ::continue::
   end
@@ -506,6 +490,7 @@ local function parse(chunks)
 end
 
 return {
+  parseTypes = parseTypes,
   parseReturn = parseReturn,
   parse = parse,
 }

@@ -1,0 +1,7 @@
+{
+  "cmake.configureOnOpen": false,
+  "Lua.workspace.library": [
+    "/home/bilal/.config/Code/User/globalStorage/sumneko.lua/addonManager/addons/luvit/module/library"
+  ],
+  "Lua.workspace.checkThirdParty": false
+}
