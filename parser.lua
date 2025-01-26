@@ -102,19 +102,19 @@ local function parseDesc(val)
 end
 
 defs.optional = compile[[ optional <- {| {:type: '?' -> 'nil' :} |} ]]
-defs.description = compile[[ description <- '#'? %s* {:description: .+ :} ]]
+defs.description = compile[[ description <- %p? %s* {:description: .+ :} ]]
 
 defs.type = compile[=[
   type <- {| {:type: bracket_literal / value_literal :} |}
 
   value_literal <- numeric_literal / string_literal
-  string_literal <- [^ ~!@#$%^&(){}/\;:,?|]+
+  string_literal <- [^ ~!@#$%^&(){}<>/\;:,?|]+
   numeric_literal <- '-'? [0-9]+
 
   bracket_literal <- {~ table_literal / array_literal / tuple_literal / fun_literal ~}
   table_literal <- '{' (bracket_literal / [^}])* '}'
   array_literal <- '[' (bracket_literal / [^]])* ']'
-  tuple_literal <- '<' (bracket_literal / [^>])* '>'
+  tuple_literal <- string_literal %s* '<' ( [^>])* '>'
   fun_literal   <- 'fun' %s* '(' (bracket_literal / [^)])* ')'
 ]=]
 
@@ -162,7 +162,7 @@ end
 
 defs.ret = compile[[
   ret <- {| %types %s* name? |}
-  name <- {:name: ('_' / [%P%S%D]) ([^%p%s] / [._])* :}
+  name <- {:name: ('_' / [^%p%s%d]) ([^%p%s] / [._])* :}
 ]]
 defs.returns = compile[[
   returns <- {|
@@ -180,7 +180,7 @@ local function parseReturn(val)
   local returns = {}
   for _, ret in ipairs(rets) do
     local new_ret = {
-      name = ret.name,
+      name = ret.name or '',
       types = {},
       nilable = false,
     }
@@ -196,7 +196,7 @@ local function parseReturn(val)
 
   return returns
 end
-p(parseReturn("string|integer? name_com.org, integer name2 hello world"))
+-- p(parseReturn("string|integer? name_com.org, integer name2 hello world"))
 -- os.exit()
 
 -- Note: I wanted to use this grammar to parse aliases but then I realized
