@@ -10,7 +10,7 @@ end
 ---Output a warning to stdout.
 ---Sadly, those warnings are often ambiguous,
 ---and don't point to a line in input, the parsing happens in a
----line agonisting way. 
+---line agonisting way.
 local function warning(fmt, ...)
   if select("#", ...) > 0 then
     fmt = fmt:format(...)
@@ -90,7 +90,7 @@ end
 -- such as "---@return integer # 1 for success!"
 -- this works as far as `#` is used to imply the description
 -- and as long as the description contains only one `#`.
--- For example this works: `@param name type | "#" # description`. 
+-- For example this works: `@param name type | "#" # description`.
 -- But not this: `@param name type | "#" # # description`.
 ---@return string, string?
 local function parseDesc(val)
@@ -101,15 +101,15 @@ local function parseDesc(val)
   return trim(content or val), trim(desc)
 end
 
-defs.optional = compile[[optional <- {| {:type: '?' -> 'nil' :} |}]]
-defs.description = compile[[description <- '#'? %s* {:description: .+ :}]]
+defs.optional = compile[[ optional <- {| {:type: '?' -> 'nil' :} |} ]]
+defs.description = compile[[ description <- '#'? %s* {:description: .+ :} ]]
 
 defs.type = compile[=[
   type <- {| {:type: bracket_literal / value_literal :} |}
 
-  value_literal <- number_literal / string_literal
-  string_literal <- [^ ~!@#$%^&(){}/\;:,?]+
-  number_literal <- '-'? [0-9]+
+  value_literal <- numeric_literal / string_literal
+  string_literal <- [^ ~!@#$%^&(){}/\;:,?|]+
+  numeric_literal <- '-'? [0-9]+
 
   bracket_literal <- {~ table_literal / array_literal / tuple_literal / fun_literal ~}
   table_literal <- '{' (bracket_literal / [^}])* '}'
@@ -119,13 +119,15 @@ defs.type = compile[=[
 ]=]
 
 defs.types = compile[[
-  types_capture <- {| types |}
   types <- %s* %type %s* (%optional / ('|' types))?
+]]
+defs.types_capture = compile[[
+  types_capture <- {| %types |}
 ]]
 
 ---@return table?
 local function parseTypes(content)
-  return defs.types:match(content)
+  return defs.types_capture:match(content)
 end
 
 local function parseClass(val)
@@ -159,29 +161,42 @@ local function parseParam(val)
 end
 
 defs.ret = compile[[
-  ret <- {| %type %s* %optional? name? %s* |}
+  ret <- {| %types %s* name? |}
   name <- {:name: ('_' / [%P%S%D]) ([^%p%s] / [._])* :}
 ]]
 defs.returns = compile[[
-  returns <- {| %ret (%s* ',' %s* %ret)* %description? |}
+  returns <- {|
+    %ret (%s* ',' %s* %ret)*
+    %description?
+  |}
 ]]
 
 ---@param val string
 local function parseReturn(val)
   -- TODO MAIN 2: I just realized we have to support multi returns
 
-  -- truncate the description first
-  -- local body, description = parseDesc(val)
-  p(defs.returns:match(val))
+  local rets = defs.returns:match(val)
 
-  return {
-    name = name or '',
-    types = types,
-    nilable = isNilable,
-    description = description,
-  }
+  local returns = {}
+  for _, ret in ipairs(rets) do
+    local new_ret = {
+      name = ret.name,
+      types = {},
+      nilable = false,
+    }
+    for _, type in ipairs(ret) do
+      table.insert(new_ret.types, type)
+      if type.type == 'nil' then
+        new_ret.nilable = true
+      end
+    end
+    table.insert(returns, new_ret)
+  end
+  returns.description = rets.description
+
+  return returns
 end
--- parseReturn("string? name_com.org, integer name2 hello world")
+p(parseReturn("string|integer? name_com.org, integer name2 hello world"))
 -- os.exit()
 
 -- Note: I wanted to use this grammar to parse aliases but then I realized
