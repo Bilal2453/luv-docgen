@@ -11,7 +11,8 @@ local cat = {}
 
 ---@alias long-alias.less_important
 --- | "CRITICAL"   # used when the world is shattering
----| 3             # the worm is invading the universe :3!
+---the worm is invading the universe :3!
+---| 3
 ---|     |         # ^|^
 
 ---initialize a sub-universe, fill it with cats!
@@ -23,7 +24,9 @@ function cat.new(name) end
 
 ]==]
 
+local parse = require '../parser'.parse
+
 local rtn = parse(chunks)
 print '----------------------'
-p(rtn)
+print(require('inspect').inspect(rtn))
 print '----------------------'

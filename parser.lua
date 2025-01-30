@@ -1,5 +1,13 @@
 local re = require("re")
 
+local inspectlua = require'inspect'
+local function inspect(...)
+  local args = {...}
+  for i = 1, select('#', ...) do
+    print(inspectlua(args[i]))
+  end
+end
+
 local insert = table.insert
 local defs = {}
 
@@ -10,7 +18,7 @@ end
 ---Output a warning to stdout.
 ---Sadly, those warnings are often ambiguous,
 ---and don't point to a line in input, the parsing happens in a
----line agonisting way.
+---line agonistic way.
 local function warning(fmt, ...)
   if select("#", ...) > 0 then
     fmt = fmt:format(...)
@@ -116,16 +124,16 @@ defs.type = compile[=[
   array_literal <- '[' (bracket_literal / [^]])* ']'
   tuple_literal <- string_literal %s* '<' ( [^>])* '>'
   fun_literal   <- 'fun' %s* '(' (bracket_literal / [^)])* ')'
-]=]
+]=] --[[@alias type_ast {type: string}]]
 
 defs.types = compile[[
   types <- %s* %type %s* (%optional / ('|' types))?
 ]]
 defs.types_capture = compile[[
   types_capture <- {| %types |}
-]]
+]] --[[@alias types_ast type_ast[] ]]
 
----@return table?
+---@return types_ast?
 local function parseTypes(content)
   return defs.types_capture:match(content)
 end
@@ -163,19 +171,20 @@ end
 defs.ret = compile[[
   ret <- {| %types %s* name? |}
   name <- {:name: ('_' / [^%p%s%d]) ([^%p%s] / [._])* :}
-]]
+]] --[[@alias return_ast {name?: string, [integer]: type_ast}]]
 defs.returns = compile[[
   returns <- {|
     %ret (%s* ',' %s* %ret)*
     %description?
   |}
-]]
+]] --[[@alias returns_ast {[integer]: return_ast, description?: string}]]
+
+---@alias return_obj {name: string, types: {type: string}[], nilable: boolean, description?: string}
 
 ---@param val string
+---@return return_obj[]
 local function parseReturn(val)
-  -- TODO MAIN 2: I just realized we have to support multi returns
-
-  local rets = defs.returns:match(val)
+  local rets = defs.returns:match(val) --[[@as returns_ast]]
 
   local returns = {}
   for _, ret in ipairs(rets) do
@@ -196,8 +205,17 @@ local function parseReturn(val)
 
   return returns
 end
--- p(parseReturn("string|integer? name_com.org, integer name2 hello world"))
--- os.exit()
+
+-- handles multi-line returns
+---@param parsed_chunk parsed_chunk
+---@param value return_obj[]
+local function handleReturns(parsed_chunk, _, value)
+  for i = 1, #value do
+    local ret = value[i]
+    ret.tag = 'return' --[[@diagnostic disable-line: inject-field]]
+    insert(parsed_chunk.annotations, ret)
+  end
+end
 
 -- Note: I wanted to use this grammar to parse aliases but then I realized
 -- it wouldn't work, as I would need to handle a ton of special cases
@@ -223,8 +241,8 @@ local function parseAlias(val)
   content = parseDesc(content)
 
   -- split the types on `|`
-  -- NOTE: this assumes that any | is splitable which is not true
-  -- for example `---@alias seperator "." | "|"`.
+  -- NOTE: this assumes that any | can be split which is not true
+  -- for example `---@alias separator "." | "|"`.
   -- We just make sure to never use `|` in quotes...
   local types = parseTypes(content)
 
@@ -234,25 +252,26 @@ end
 -- handles multi-line aliases
 ---@param parsed_chunk parsed_chunk
 ---@param line_type line_type
+---@param val table|string|nil
 local function handleAlias(parsed_chunk, line_type, val)
-  -- if this is the first line, pass to the next
+  -- if this is the first line in a multi-line alias, pass to the next
   if parsed_chunk.type ~= "alias" then
-    parsed_chunk.type = "alias"
+    parsed_chunk.type = "alias" -- TODO: do we really need this property? we can check if line_type ~= "description"
     return true
   end
   -- we only want to handle description type
   if line_type ~= "description" then
     return false
   end
-  local value = parsed_chunk.value
-  if not value then
+  if not val then
     -- could happen in case an alias doesn't have a name(?)
-    warning("a broken alias detected, possibly missing name")
+    warning("broken alias detected, possibly missing name")
     parsed_chunk.type = nil -- unset
     -- TODO: we might want to reset the type to the older value
     -- of parsed_chunk.type instead of nil.
     return false
   end
+  ---@cast val string
 
   -- handle non-description type lines, such as in:
   -- ---| integer
@@ -273,11 +292,17 @@ local function handleAlias(parsed_chunk, line_type, val)
       type.description = table.concat(parsed_chunk.value.cached_description, '\n')
       parsed_chunk.value.cached_description = nil
     end
+    parsed_chunk.value.types = parsed_chunk.value.types or {}
     insert(parsed_chunk.value.types, type)
     return true
   end
 
+  if not parsed_chunk.value.types then
+    warning('Alias "%s" does not have any types defined')
+  end
+
   -- handle description lines
+
   -- we cache the description and use it
   -- when we hit the `|` line in the above route
   local description = parsed_chunk.value.cached_description or {}
@@ -304,6 +329,7 @@ local tags_parsers = {
 -- tags that we want to handle and are part of a section
 local handled_tags = {
   alias = handleAlias,
+  ["return"] = handleReturns,
 }
 
 -- tags that when reached, marks the start of a new section
@@ -384,24 +410,25 @@ local function parseChunk(chunk)
 
   local handler
   local function handleTag(line_type, line_value)
-    if handler then
-      local keep = handler(parsed_chunk, line_type, line_value)
-      if not keep then
-        handler = nil
+    if not handler then
+      return
+    end
+    local keep = handler(parsed_chunk, line_type, line_value)
+    if not keep then
+      handler = nil
+    else
+      if type(keep) == "function" then
+        handler = keep
+        return handleTag(line_type, line_value)
       else
-        if type(keep) == "function" then
-          handler = keep
-          return handleTag(line_type, line_value)
-        else
-          return true
-        end
+        return true
       end
     end
   end
 
   for _, line in ipairs(chunk) do
     local line_type, line_value = parseLine(line)
-    p(line_type, line_value) -- DEBUGGING
+    p('line_type, line_value:', line_type, line_value) -- DEBUGGING
 
     if handleTag(line_type, line_value) then
       goto continue
@@ -451,8 +478,15 @@ local function makeClass(section, chunk)
   section.description = chunk.description
 end
 
+local function makeFunctions(section, chunk)
+  -- TODO: plan how methods/functions are going to be laid out
+  section.type = "functions"
+end
+
 local function flushSection(section, namespace)
-  insert(namespace, section)
+  if next(section) then
+    insert(namespace, section)
+  end
   return {}
 end
 
@@ -464,7 +498,6 @@ local function parse(chunks)
 
   for _, chunk in ipairs(chunks) do
     local parsed_chunk = parseChunk(chunk)
-    p(parsed_chunk)
 
     -- handle terminator chunks, chunks that create
     -- a new section terminating previous one
@@ -493,7 +526,11 @@ local function parse(chunks)
     -- handle other important chunks
     if parsed_chunk.type == "alias" then
       insert(section.aliases, parsed_chunk.value)
-    -- elseif parsed_chunk.type == "functions" then
+    elseif parsed_chunk.lua[1] and parsed_chunk.lua[1]:match('^%s*function%s*.-%s*%b()%s*.-end%s*$') then
+      -- TODO MAIN: parse functions
+      p('inserting method ')
+      inspect(parsed_chunk)
+      insert(section.methods, parsed_chunk.value)
     end
     -- TODO MAIN 3: parse function groups, classes methods and overloads
 
