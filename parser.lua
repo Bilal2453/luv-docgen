@@ -168,9 +168,12 @@ local function parseParam(val)
   }
 end
 
+defs.name = compile[[
+  name <- ('_' / [^%p%s%d]) ([^%p%s] / [_])* ('.' name)?
+]]
 defs.ret = compile[[
-  ret <- {| %types %s* name? |}
-  name <- {:name: ('_' / [^%p%s%d]) ([^%p%s] / [._])* :}
+  ret <- {| %types %s* ret_name? |}
+  ret_name <- {:name: %name :}
 ]] --[[@alias return_ast {name?: string, [integer]: type_ast}]]
 defs.returns = compile[[
   returns <- {|
@@ -315,6 +318,10 @@ end
 
 local function parseSection(val)
   return {title = val:match('.*') or ''}
+end
+
+local function parseFunction(val)
+
 end
 
 local tags_parsers = {
@@ -483,17 +490,37 @@ local function makeFunctions(section, chunk)
   section.type = "functions"
 end
 
+-- multiple assignments not supported
+defs.assignment = compile[[
+  assignment <- {| local_assignment / global_assignment |}
+  local_assignment <- %s* 'local' %s* {:var: %name :} %s* ('=' %s* {:expr: .+ :})?
+  global_assignment <- %s* {:var: %name :} %s* '=' %s* {:expr: .+ :}
+]]
+
+---Ran when a type annotation comes before a variable declaration,
+---such as @class and methods/functions definitions.
+local function assignVariables(lines, section, variables)
+  for _, line in ipairs(lines) do
+    local assignment = defs.assignment:match(line)
+    p(32132, line, assignment)
+    if assignment then
+      variables[assignment.var] = section
+    end
+  end
+end
+
 local function flushSection(section, namespace)
   if next(section) then
     insert(namespace, section)
   end
-  return {}
+  return {variables = section.variables}
 end
 
 ---@param chunks string[][]
 local function parse(chunks)
   assert(type(chunks) == "table", "bad argument #1 to parse (expected table)")
   local rtn = {}
+  local variables = {}
   local section = {}
 
   for _, chunk in ipairs(chunks) do
@@ -512,6 +539,8 @@ local function parse(chunks)
       and parsed_chunk.terminator.section then
         section = flushSection(section, rtn)
         makeClass(section, parsed_chunk)
+        assignVariables(parsed_chunk.lua, section, variables)
+        p(1232, variables)
       elseif parsed_chunk.terminator.section then
         section = flushSection(section, rtn)
         makeText(section, parsed_chunk)
@@ -526,7 +555,7 @@ local function parse(chunks)
     -- handle other important chunks
     if parsed_chunk.type == "alias" then
       insert(section.aliases, parsed_chunk.value)
-    elseif parsed_chunk.lua[1] and parsed_chunk.lua[1]:match('^%s*function%s*.-%s*%b()%s*.-end%s*$') then
+    elseif parsed_chunk.lua[1] and parsed_chunk.lua[1]:match('^%s*function.-end%s*$') then
       -- TODO MAIN: parse functions
       p('inserting method ')
       inspect(parsed_chunk)
