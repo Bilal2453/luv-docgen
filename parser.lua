@@ -392,7 +392,7 @@ local function parseChunk(chunk)
 
   for _, line in ipairs(chunk) do
     local line_type, line_value = parseLine(line)
-    p('line_type, line_value:', line_type, line_value) -- DEBUGGING
+    -- p('line_type, line_value:', line_type, line_value) -- DEBUGGING
 
     if handleTag(line_type, line_value) then
       goto continue
@@ -403,7 +403,7 @@ local function parseChunk(chunk)
       if terminator_tags[line_value.tag] then
         parsed_chunk.terminator[line_value.tag] = line_value
       elseif handled_tags[line_value.tag] then
-        if parsed_chunk.value then
+        if parsed_chunk.value and parsed_chunk.type then
           warning("detected %s in the same chunk as another %s, overriding older definition!", line_value.tag, parsed_chunk.type)
         end
         parsed_chunk.value = line_value
@@ -452,7 +452,6 @@ end
 local function assignVariables(lines, section, variables)
   for _, line in ipairs(lines) do
     local assignment = defs.assignment:match(line)
-    p(32132, line, assignment)
     if assignment then
       variables[assignment.var] = section
     end
@@ -463,7 +462,7 @@ local function flushSection(section, namespace)
   if next(section) then
     insert(namespace, section)
   end
-  return {variables = section.variables}
+  return {}
 end
 
 ---@param chunks string[][]
@@ -490,7 +489,6 @@ local function parse(chunks)
         section = flushSection(section, rtn)
         makeClass(section, parsed_chunk)
         assignVariables(parsed_chunk.lua, section, variables)
-        p(1232, variables)
       elseif parsed_chunk.terminator.section then
         section = flushSection(section, rtn)
         makeText(section, parsed_chunk)

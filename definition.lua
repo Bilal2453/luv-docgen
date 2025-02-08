@@ -8,10 +8,6 @@ local defs = setmetatable({}, {
   end,
 })
 
-local function compile(def)
-  return re.compile(def, defs)
-end
-
 defs.optional = [[
   optional <- {| {:type: '?' -> 'nil' :} |}
 ]]
@@ -45,12 +41,16 @@ defs.types_capture = [[
 
 
 defs.name = [[
-  name <- ('_' / [^%p%s%d]) ([^%p%s] / [_])* ('.' name)?
+  name <- ('_' / [^%p%s%d]) ([^%p%s] / [_])*
+]]
+
+defs.var = [[
+  var <- %s* %name (%s* '.' %s* var)? %s*
 ]]
 
 defs.ret = [[
   ret <- {| %types %s* ret_name? |}
-  ret_name <- {:name: %name :}
+  ret_name <- {:name: %var :}
 ]] --[[@alias return_ast {name?: string, [integer]: type_ast}]]
 
 defs.returns = [[
@@ -67,5 +67,13 @@ defs.assignment = [[
   global_assignment <- %s* {:var: %name :} %s* '=' %s* {:expr: .+ :}
 ]]
 
+-- TODO:
+defs.functions = [[
+  capture <- {| function / method |}
+  function <- 'function' %s* ({:class: %name :} '.')? {:name: %name :} {:args: {| args |} :} [^'end']* 'end'
+  method <- 'function' %s* ({:class: %name :} ':')? {:name: %name :} {:args: {| args |} :} [^'end']* 'end'
+
+  args <- %s* '(' %s* ({ %name } (%s* ',' %s* { %name })*)? %s* ')' %s*
+]]
 
 return defs
