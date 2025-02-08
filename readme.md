@@ -261,7 +261,9 @@ Individual types:
       -- in the order they appear in
       {
         name = "the name of the return or empty string",
-        types = "TODO: should this be a string of the annotated returns or should it be parsed into an array?",
+        types = {
+          {type = "string"},
+        },
         description = "...",
         nilable = true or false, -- TODO: or should this be called "optional"?
       },

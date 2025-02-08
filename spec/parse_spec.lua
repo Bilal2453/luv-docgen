@@ -4,14 +4,15 @@ local chunks = require'../scanner' [==[
 ---@section Main
 ---Contains the class of the main universe in the main galaxy.
 ---Surprise surprise, it has been all tables all the time!
----@class *universe.Main_Milkyway-Galaxy table[]
+---@class *universe.Main_Milkyway-Galaxy: table
 local cat = {}
 
 ---@alias short-alias.important* table[] # useless description
 
 ---@alias long-alias.less_important
 --- | "CRITICAL"   # used when the world is shattering
----| 3             # the worm is invading the universe :3!
+---the worm is invading the universe :3!
+---| 3
 ---|     |         # ^|^
 
 ---initialize a sub-universe, fill it with cats!
@@ -23,7 +24,12 @@ function cat.new(name) end
 
 ]==]
 
+---@class test: table
+local tbl = {}
+
+local parse = require '../parser'.parse
+
 local rtn = parse(chunks)
 print '----------------------'
-p(rtn)
+print(require('inspect').inspect(rtn))
 print '----------------------'
