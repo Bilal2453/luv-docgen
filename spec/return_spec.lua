@@ -1,6 +1,5 @@
-local parseReturn = require('../parser').parseReturn
+local parseReturn = require('parser').parseReturn
 
-package.path = package.path .. ';/usr/share/lua/5.4/?.lua;/usr/share/lua/5.4/?/init.lua;/usr/lib64/lua/5.4/?.lua;/usr/lib64/lua/5.4/?/init.lua;./?.lua;./?/init.lua;/home/bilal/.luarocks/share/lua/5.4/?.lua;/home/bilal/.luarocks/share/lua/5.4/?/init.lua'
 assert = require("luassert")
 
 -- single return

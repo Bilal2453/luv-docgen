@@ -1,6 +1,5 @@
-local re = require("re")
-
-local inspectlua = require'inspect'
+local defs = require('definition')
+local inspectlua = require('inspect')
 local function inspect(...)
   local args = {...}
   for i = 1, select('#', ...) do
@@ -9,11 +8,6 @@ local function inspect(...)
 end
 
 local insert = table.insert
-local defs = {}
-
-local function compile(def)
-  return re.compile(def, defs)
-end
 
 ---Output a warning to stdout.
 ---Sadly, those warnings are often ambiguous,
@@ -109,30 +103,6 @@ local function parseDesc(val)
   return trim(content or val), trim(desc)
 end
 
-defs.optional = compile[[ optional <- {| {:type: '?' -> 'nil' :} |} ]]
-defs.description = compile[[ description <- %p? %s* {:description: .+ :} ]]
-
-defs.type = compile[=[
-  type <- {| {:type: bracket_literal / value_literal :} |}
-
-  value_literal <- numeric_literal / string_literal
-  string_literal <- [^ ~!@#$%^&(){}<>/\;:,?|]+
-  numeric_literal <- '-'? [0-9]+
-
-  bracket_literal <- {~ table_literal / array_literal / tuple_literal / fun_literal ~}
-  table_literal <- '{' (bracket_literal / [^}])* '}'
-  array_literal <- '[' (bracket_literal / [^]])* ']'
-  tuple_literal <- string_literal %s* '<' ( [^>])* '>'
-  fun_literal   <- 'fun' %s* '(' (bracket_literal / [^)])* ')'
-]=] --[[@alias type_ast {type: string}]]
-
-defs.types = compile[[
-  types <- %s* %type %s* (%optional / ('|' types))?
-]]
-defs.types_capture = compile[[
-  types_capture <- {| %types |}
-]] --[[@alias types_ast type_ast[] ]]
-
 ---@return types_ast?
 local function parseTypes(content)
   return defs.types_capture:match(content)
@@ -168,26 +138,13 @@ local function parseParam(val)
   }
 end
 
-defs.name = compile[[
-  name <- ('_' / [^%p%s%d]) ([^%p%s] / [_])* ('.' name)?
-]]
-defs.ret = compile[[
-  ret <- {| %types %s* ret_name? |}
-  ret_name <- {:name: %name :}
-]] --[[@alias return_ast {name?: string, [integer]: type_ast}]]
-defs.returns = compile[[
-  returns <- {|
-    %ret (%s* ',' %s* %ret)*
-    %description?
-  |}
-]] --[[@alias returns_ast {[integer]: return_ast, description?: string}]]
-
 ---@alias return_obj {name: string, types: {type: string}[], nilable: boolean, description?: string}
 
 ---@param val string
 ---@return return_obj[]
 local function parseReturn(val)
   local rets = defs.returns:match(val) --[[@as returns_ast]]
+  p(val)
 
   local returns = {}
   for _, ret in ipairs(rets) do
@@ -489,13 +446,6 @@ local function makeFunctions(section, chunk)
   -- TODO: plan how methods/functions are going to be laid out
   section.type = "functions"
 end
-
--- multiple assignments not supported
-defs.assignment = compile[[
-  assignment <- {| local_assignment / global_assignment |}
-  local_assignment <- %s* 'local' %s* {:var: %name :} %s* ('=' %s* {:expr: .+ :})?
-  global_assignment <- %s* {:var: %name :} %s* '=' %s* {:expr: .+ :}
-]]
 
 ---Ran when a type annotation comes before a variable declaration,
 ---such as @class and methods/functions definitions.

@@ -1,5 +1,5 @@
 
-local chunks = require'../scanner' [==[
+local chunks = require'scanner' [==[
 ---The main section of this entire world.
 ---@section Main
 ---Contains the class of the main universe in the main galaxy.
@@ -27,7 +27,7 @@ function cat.new(name) end
 ---@class test: table
 local tbl = {}
 
-local parse = require '../parser'.parse
+local parse = require 'parser'.parse
 
 local rtn = parse(chunks)
 print '----------------------'
