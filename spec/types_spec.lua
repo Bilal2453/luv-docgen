@@ -1,6 +1,6 @@
 local parseTypes = require('parser').parseTypes
 
-assert = require("luassert")
+assert = require('luassert')
 
 do
   assert.same(parseTypes('string'), {

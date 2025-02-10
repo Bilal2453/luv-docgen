@@ -22,6 +22,11 @@ local cat = {}
 ---@return long-alias.less_important?
 function cat.new(name) end
 
+---start galaxy forming, the longer the meowing the more galaxies going to form!
+---@param meow number? # Defaults to 42
+---@return boolean success, string? error_msg
+function cat:meow(duration) end
+
 ]==]
 
 ---@class test: table
@@ -30,6 +35,6 @@ local tbl = {}
 local parse = require 'parser'.parse
 
 local rtn = parse(chunks)
-print '----------------------'
-print(require('inspect').inspect(rtn))
-print '----------------------'
+-- print '----------------------'
+-- print(require('inspect').inspect(rtn))
+-- print '----------------------'

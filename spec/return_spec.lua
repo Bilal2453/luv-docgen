@@ -1,24 +1,24 @@
 local parseReturn = require('parser').parseReturn
 
-assert = require("luassert")
+assert = require('luassert')
 
 -- single return
 do
   assert.same(parseReturn('string? error_msg'), {
     {
       types = {
-        {type = "string"},
-        {type = "nil"},
+        {type = 'string'},
+        {type = 'nil'},
       },
-      name = "error_msg",
+      name = 'error_msg',
       nilable = true,
     }
   })
   assert.same(parseReturn('{[string]: integer?}?'), {
     {
       types = {
-        {type = "{[string]: integer?}"},
-        {type = "nil"},
+        {type = '{[string]: integer?}'},
+        {type = 'nil'},
       },
       name = '',
       nilable = true,
@@ -27,8 +27,8 @@ do
   assert.same(parseReturn('string | number error_msg'), {
     {
       types = {
-        {type = "string"},
-        {type = "number"},
+        {type = 'string'},
+        {type = 'number'},
       },
       name = 'error_msg',
       nilable = false,
@@ -37,7 +37,7 @@ do
   assert.same(parseReturn('long-alias.less_important'), {
     {
       types = {
-        {type = "long-alias.less_important"},
+        {type = 'long-alias.less_important'},
       },
       name = '',
       nilable = false,
@@ -51,26 +51,26 @@ do
   assert.same(parseReturn('0|nil success, string? err_name, string? err_msg'), {
     {
       types = {
-        {type = "0"},
-        {type = "nil"},
+        {type = '0'},
+        {type = 'nil'},
       },
-      name = "success",
+      name = 'success',
       nilable = true,
     },
     {
       types = {
-        {type = "string"},
-        {type = "nil"},
+        {type = 'string'},
+        {type = 'nil'},
       },
-      name = "err_name",
+      name = 'err_name',
       nilable = true,
     },
     {
       types = {
-        {type = "string"},
-        {type = "nil"},
+        {type = 'string'},
+        {type = 'nil'},
       },
-      name = "err_msg",
+      name = 'err_msg',
       nilable = true,
     }
   })
@@ -78,17 +78,17 @@ do
   assert.same(parseReturn('string? no, boolean error'), {
     {
       types = {
-        {type = "string"},
-        {type = "nil"},
+        {type = 'string'},
+        {type = 'nil'},
       },
-      name = "no",
+      name = 'no',
       nilable = true,
     },
     {
       types = {
-        {type = "boolean"},
+        {type = 'boolean'},
       },
-      name = "error",
+      name = 'error',
       nilable = false,
     }
   })
@@ -96,17 +96,17 @@ do
   assert.same(parseReturn('t1 name, t2 | t3 name2'), {
     {
       types = {
-        {type = "t1"},
+        {type = 't1'},
       },
-      name = "name",
+      name = 'name',
       nilable = false,
     },
     {
       types = {
-        {type = "t2"},
-        {type = "t3"},
+        {type = 't2'},
+        {type = 't3'},
       },
-      name = "name2",
+      name = 'name2',
       nilable = false,
     }
   })
@@ -114,59 +114,59 @@ do
   assert.same(parseReturn('t1 name, t2, t3 name2, t4? # some description'), {
     {
       types = {
-        {type = "t1"},
+        {type = 't1'},
       },
-      name = "name",
+      name = 'name',
       nilable = false,
     },
     {
       types = {
-        {type = "t2"},
+        {type = 't2'},
       },
-      name = "",
+      name = '',
       nilable = false,
     },
     {
       types = {
-        {type = "t3"},
+        {type = 't3'},
       },
-      name = "name2",
+      name = 'name2',
       nilable = false,
     },
     {
       types = {
-        {type = "t4"},
-        {type = "nil"},
+        {type = 't4'},
+        {type = 'nil'},
       },
-      name = "",
+      name = '',
       nilable = true,
     },
-    description = "some description",
+    description = 'some description',
   })
   -- table<a, b> tuple, {complex: true} complex, boolean simple
   assert.same(parseReturn('table<a, b> tuple, {complex: true} complex, boolean simple this is description'), {
     {
       types = {
-        {type = "table<a, b>"},
+        {type = 'table<a, b>'},
       },
-      name = "tuple",
+      name = 'tuple',
       nilable = false,
     },
     {
       types = {
-        {type = "{complex: true}"},
+        {type = '{complex: true}'},
       },
-      name = "complex",
+      name = 'complex',
       nilable = false,
     },
     {
       types = {
-        {type = "boolean"},
+        {type = 'boolean'},
       },
-      name = "simple",
+      name = 'simple',
       nilable = false,
     },
-    description = "this is description",
+    description = 'this is description',
   })
 end
 os.exit(0)

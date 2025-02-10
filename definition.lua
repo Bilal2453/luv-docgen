@@ -1,3 +1,4 @@
+local lpeg = require('lpeg')
 local re = require('re')
 
 ---@diagnostic disable: assign-type-mismatch
@@ -67,13 +68,19 @@ defs.assignment = [[
   global_assignment <- %s* {:var: %name :} %s* '=' %s* {:expr: .+ :}
 ]]
 
--- TODO:
+defs['true'] = lpeg.Cc(true)
+defs['false'] = lpeg.Cc(false)
+
 defs.functions = [[
   capture <- {| function / method |}
   function <- 'function' %s* ({:class: %name :} '.')? {:name: %name :} {:args: {| args |} :} [^'end']* 'end'
-  method <- 'function' %s* ({:class: %name :} ':')? {:name: %name :} {:args: {| args |} :} [^'end']* 'end'
+  method <- 'function' %s* ({:class: %name :} {:isMethod: %true :} ':')? {:name: %name :} {:args: {| {: %true -> 'self' :} args |} :} [^'end']* 'end'
 
   args <- %s* '(' %s* ({ %name } (%s* ',' %s* { %name })*)? %s* ')' %s*
 ]]
+
+-- p(defs.functions:match('function cat.new(a, b, c) end'))
+-- p(defs.functions:match('function dog:new(a, b, c) end'))
+-- os.exit()
 
 return defs

@@ -14,7 +14,7 @@ local insert = table.insert
 ---and don't point to a line in input, the parsing happens in a
 ---line agonistic way.
 local function warning(fmt, ...)
-  if select("#", ...) > 0 then
+  if select('#', ...) > 0 then
     fmt = fmt:format(...)
   end
   print(fmt)
@@ -23,7 +23,7 @@ end
 ---@param str string
 ---@return string
 local function trim(str)
-  if type(str) ~= "string" then
+  if type(str) ~= 'string' then
     return str
   end
   return (str:gsub('^%s*', ''):gsub('%s*$', ''))
@@ -78,11 +78,11 @@ A handler is passed the parsed chunk struct, the line type, and the line value.
 ---A string that holds a description, empty string if none.
 ---@field description string
 ---Some handlers might want to provide a type, such as "alias".
----@field type "alias" | string?
+---@field type 'alias' | string?
 ---Some handlers might want to provide a "value" struct, see type for more info.
 ---@field value table?
 
----@alias line_type "annotation" | "description" | "lua"
+---@alias line_type 'annotation' | 'description' | 'lua'
 
 local function pass()
   return {}
@@ -215,17 +215,17 @@ end
 ---@param val table|string|nil
 local function handleAlias(parsed_chunk, line_type, val)
   -- if this is the first line in a multi-line alias, pass to the next
-  if parsed_chunk.type ~= "alias" then
-    parsed_chunk.type = "alias" -- TODO: do we really need this property? we can check if line_type ~= "description"
+  if parsed_chunk.type ~= 'alias' then
+    parsed_chunk.type = 'alias' -- TODO: do we really need this property? we can check if line_type ~= 'description'
     return true
   end
   -- we only want to handle description type
-  if line_type ~= "description" then
+  if line_type ~= 'description' then
     return false
   end
   if not val then
     -- could happen in case an alias doesn't have a name(?)
-    warning("broken alias detected, possibly missing name")
+    warning('broken alias detected, possibly missing name')
     parsed_chunk.type = nil -- unset
     -- TODO: we might want to reset the type to the older value
     -- of parsed_chunk.type instead of nil.
@@ -287,13 +287,13 @@ local tags_parsers = {
   class = parseClass,
   param = parseParam,
   alias = parseAlias,
-  ["return"] = parseReturn,
+  ['return'] = parseReturn,
 }
 
 -- tags that we want to handle and are part of a section
 local handled_tags = {
   alias = handleAlias,
-  ["return"] = handleReturns,
+  ['return'] = handleReturns,
 }
 
 -- tags that when reached, marks the start of a new section
@@ -339,14 +339,14 @@ local function parseLine(line)
   if tag then
     local parsed_tag = parseTag(tag, value)
     if parsed_tag then
-      return "annotation", parsed_tag
+      return 'annotation', parsed_tag
     end
-    return warning("unhandled annotation tag @%s", tostring(tag))
+    return warning('unhandled annotation tag @%s', tostring(tag))
   end
 
   local description = line:match('%-%-%-%s*(.*)')
   if description then
-    return "description", description
+    return 'description', description
   end
 
   -- TODO: we might want to do something about comments starting with
@@ -356,7 +356,7 @@ local function parseLine(line)
   -- There are some complications that may arise if we want to support them,
   -- won't know for sure until the finish of the parser.
 
-  return "lua", line
+  return 'lua', line
 end
 
 
@@ -381,7 +381,7 @@ local function parseChunk(chunk)
     if not keep then
       handler = nil
     else
-      if type(keep) == "function" then
+      if type(keep) == 'function' then
         handler = keep
         return handleTag(line_type, line_value)
       else
@@ -398,13 +398,13 @@ local function parseChunk(chunk)
       goto continue
     end
 
-    if line_type == "annotation" then
+    if line_type == 'annotation' then
       ---@cast line_value table
       if terminator_tags[line_value.tag] then
         parsed_chunk.terminator[line_value.tag] = line_value
       elseif handled_tags[line_value.tag] then
         if parsed_chunk.value and parsed_chunk.type then
-          warning("detected %s in the same chunk as another %s, overriding older definition!", line_value.tag, parsed_chunk.type)
+          warning('detected %s in the same chunk as another %s, overriding older definition!', line_value.tag, parsed_chunk.type)
         end
         parsed_chunk.value = line_value
         handler = handled_tags[line_value.tag]
@@ -412,7 +412,7 @@ local function parseChunk(chunk)
       else
         insert(parsed_chunk.annotations, line_value)
       end
-    elseif line_type == "description" then
+    elseif line_type == 'description' then
       insert(descriptions, line_value)
     else
       insert(parsed_chunk.lua, line_value)
@@ -426,14 +426,14 @@ local function parseChunk(chunk)
 end
 
 local function makeText(section, chunk)
-  section.type = "text"
+  section.type = 'text'
   section.title = chunk.terminator.section.title
   section.aliases = {}
   section.description = chunk.description
 end
 
 local function makeClass(section, chunk)
-  section.type = "class"
+  section.type = 'class'
   section.name = chunk.terminator.class.name
   section.title = chunk.terminator.section.title
   section.parents = chunk.terminator.class.parents
@@ -444,7 +444,7 @@ end
 
 local function makeFunctions(section, chunk)
   -- TODO: plan how methods/functions are going to be laid out
-  section.type = "functions"
+  section.type = 'functions'
 end
 
 ---Ran when a type annotation comes before a variable declaration,
@@ -467,7 +467,7 @@ end
 
 ---@param chunks string[][]
 local function parse(chunks)
-  assert(type(chunks) == "table", "bad argument #1 to parse (expected table)")
+  assert(type(chunks) == 'table', 'bad argument #1 to parse (expected table)')
   local rtn = {}
   local variables = {}
   local section = {}
@@ -480,7 +480,7 @@ local function parse(chunks)
     if next(parsed_chunk.terminator) then
       if parsed_chunk.terminator.namespace then
         if section.type then
-          warning("a section was detected before a namespace was found!")
+          warning('a section was detected before a namespace was found!')
           section = flushSection(section, rtn)
         end
         makeText(section, parsed_chunk)
@@ -495,18 +495,35 @@ local function parse(chunks)
       end
       goto continue
     elseif not section.type then
-      warning("a chunk outside of any section was detected and will be ignored!")
+      warning('a chunk outside of any section was detected and will be ignored!')
       p(parsed_chunk)
       goto continue
     end
 
     -- handle other important chunks
-    if parsed_chunk.type == "alias" then
+    if parsed_chunk.type == 'alias' then
       insert(section.aliases, parsed_chunk.value)
-    elseif parsed_chunk.lua[1] and parsed_chunk.lua[1]:match('^%s*function.-end%s*$') then
-      -- TODO MAIN: parse functions
-      p('inserting method ')
-      inspect(parsed_chunk)
+    elseif parsed_chunk.lua[1] and parsed_chunk.lua[1]:match('^%s*function') then
+      -- note: the language server only respects the first declaration as a proper cast
+      local func_ast = defs.functions:match(parsed_chunk.lua[1])
+      if not func_ast then
+        warning('failed to parse function declaration, skipping: "%s"', parsed_chunk.lua[1])
+        goto continue
+      end
+
+      local method = {
+        name = func_ast.name,
+        description = parsed_chunk.description,
+        method_form = func_ast.isMethod and (func_ast.class .. ':' .. func_ast.name) or nil,
+        params = {},
+        returns = {},
+        overloads = {},
+      }
+
+
+      p(method)
+      -- p('inserting method ')
+      -- inspect(parsed_chunk)
       insert(section.methods, parsed_chunk.value)
     end
     -- TODO MAIN 3: parse function groups, classes methods and overloads
