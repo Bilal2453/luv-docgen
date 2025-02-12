@@ -29,23 +29,6 @@ local function trim(str)
   return (str:gsub('^%s*', ''):gsub('%s*$', ''))
 end
 
----Merge the array portion of table b into table a.
----Returns table a.
----@generic T: table
----@param a T?
----@param b table?
----@return T
-local function mergeArray(a, b)
-  a = a or {}
-  if b then
-    local len = #a
-    for i = 1, #b do
-      a[len + i] = b[i]
-    end
-  end
-  return a
-end
-
 
 --[[ Defining annotation tags parsers. ]] --[[
 
@@ -130,9 +113,17 @@ local function parseParam(val)
   types, description = parseDesc(types)
   types = parseTypes(types)
 
+  if not types then
+    return warning('failed to parse types for param "%s"', name)
+  end
+  local type = {}
+  for _, t in ipairs(types) do
+    insert(type, t.type)
+  end
+
   return {
     name = name,
-    type = types,
+    type = type,
     optional = opt,
     description = description,
   }
@@ -144,7 +135,6 @@ end
 ---@return return_obj[]
 local function parseReturn(val)
   local rets = defs.returns:match(val) --[[@as returns_ast]]
-  p(val)
 
   local returns = {}
   for _, ret in ipairs(rets) do
@@ -154,7 +144,7 @@ local function parseReturn(val)
       nilable = false,
     }
     for _, type in ipairs(ret) do
-      table.insert(new_ret.types, type)
+      table.insert(new_ret.types, type.type)
       if type.type == 'nil' then
         new_ret.nilable = true
       end
@@ -177,21 +167,6 @@ local function handleReturns(parsed_chunk, _, value)
   end
 end
 
--- Note: I wanted to use this grammar to parse aliases but then I realized
--- it wouldn't work, as I would need to handle a ton of special cases
--- for `type`, such as `table<a,b>`, `integer[][][]`, quotes, escapes, generics, etc.
--- it would be A TON of work for just this.
--- local alias_grammar = re.compile([[
---   alias         <- {| name sp types? |}
---   types         <- {:types:  {| ({| type |} / or)+ optional_type |} :}
---   optional_type <- ( {| {:type: '?' -> 'nil' :} |})?
---   type          <- {:type: [^ ]+ :}
---   name          <- {:name: word :}
---
---   or      <- sp '|' sp
---   word <- { ([^%p ] / ["*._-])+ }
---   sp <- ' '*
--- ]])
 local function parseAlias(val)
   -- match the alias name and the alias content
   -- note that this assumes valid name and content names
@@ -275,10 +250,6 @@ end
 
 local function parseSection(val)
   return {title = val:match('.*') or ''}
-end
-
-local function parseFunction(val)
-
 end
 
 local tags_parsers = {
@@ -520,11 +491,26 @@ local function parse(chunks)
         overloads = {},
       }
 
+      for _, annotation in ipairs(parsed_chunk.annotations) do
+        if annotation.tag == 'param' then
+          p(123, annotation)
+          insert(method.params, {
+            name = annotation.name,
+            type = annotation.type,
+            optional = annotation.optional,
+            description = annotation.description,
+          })
+        elseif annotation.tag == 'return' then
+          insert(method.returns, {
+            name = annotation.name,
+            types = annotation.types,
+            nilable = annotation.nilable,
+            description = annotation.description,
+          })
+        end
+      end
 
-      p(method)
-      -- p('inserting method ')
-      -- inspect(parsed_chunk)
-      insert(section.methods, parsed_chunk.value)
+      insert(section.methods, method)
     end
     -- TODO MAIN 3: parse function groups, classes methods and overloads
 

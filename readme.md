@@ -204,7 +204,7 @@ Note: replace any `::Type::` with the table defined below this block with the sa
       ...
     },
   },
-  
+
   ...
 }
 ```
@@ -262,7 +262,8 @@ Individual types:
       {
         name = "the name of the return or empty string",
         types = {
-          {type = "string"},
+          "string",
+          ...
         },
         description = "...",
         nilable = true or false, -- TODO: or should this be called "optional"?
