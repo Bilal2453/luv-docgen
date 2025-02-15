@@ -396,52 +396,114 @@ local function parseChunk(chunk)
   return parsed_chunk
 end
 
-local function makeText(section, chunk)
-  section.type = 'text'
-  section.title = chunk.terminator.section.title
-  section.aliases = {}
-  section.description = chunk.description
+---@class Section
+local Section = {}
+
+---@class ClassSection: Section
+---@field type 'class'
+---@field name string
+---@field title string
+---@field parents string[]
+---@field aliases table[]
+---@field methods table[]
+---@field description string
+
+---@class TextSection: Section
+---@field type 'text'
+---@field title string
+---@field aliases table[]
+---@field description string
+
+---@return Section
+function Section.new()
+  return setmetatable({}, {__index = Section})
 end
 
-local function makeClass(section, chunk)
-  section.type = 'class'
-  section.name = chunk.terminator.class.name
-  section.title = chunk.terminator.section.title
-  section.parents = chunk.terminator.class.parents
-  section.aliases = {}
-  section.methods = {}
-  section.description = chunk.description
+function Section:makeText(chunk)
+  ---@cast self TextSection
+  self.type = 'text'
+  self.title = chunk.terminator.section.title
+  self.aliases = {}
+  self.description = chunk.description
 end
 
-local function makeFunctions(section, chunk)
-  -- TODO: plan how methods/functions are going to be laid out
-  section.type = 'functions'
+function Section:makeClass(chunk)
+  ---@cast self ClassSection
+  self.type = 'class'
+  self.name = chunk.terminator.class.name
+  self.title = chunk.terminator.section.title
+  self.parents = chunk.terminator.class.parents
+  self.aliases = {}
+  self.methods = {}
+  self.description = chunk.description
+end
+
+---@return Section
+function Section:flushSection(namespace)
+  if next(self) then
+    insert(namespace, self)
+  end
+  return Section.new()
 end
 
 ---Ran when a type annotation comes before a variable declaration,
 ---such as @class and methods/functions definitions.
-local function assignVariables(lines, section, variables)
+function Section:assignVariables(lines, variables)
   for _, line in ipairs(lines) do
     local assignment = defs.assignment:match(line)
     if assignment then
-      variables[assignment.var] = section
+      variables[assignment.var] = self
     end
   end
 end
 
-local function flushSection(section, namespace)
-  if next(section) then
-    insert(namespace, section)
+function Section:addMethod(parsed_chunk)
+  if not self.methods then
+    return
   end
-  return {}
+
+  -- note: the language server only respects the first declaration as a proper cast
+  local func_ast = defs.functions:match(parsed_chunk.lua[1])
+  if not func_ast then
+    return warning('failed to parse function declaration, skipping: "%s"', parsed_chunk.lua[1])
+  end
+
+  local method = {
+    name = func_ast.name,
+    description = parsed_chunk.description,
+    method_form = func_ast.isMethod and (func_ast.class .. ':' .. func_ast.name) or nil,
+    params = {},
+    returns = {},
+    overloads = {},
+  }
+
+  for _, annotation in ipairs(parsed_chunk.annotations) do
+    if annotation.tag == 'param' then
+      insert(method.params, {
+        name = annotation.name,
+        type = annotation.type,
+        optional = annotation.optional,
+        description = annotation.description,
+      })
+    elseif annotation.tag == 'return' then
+      insert(method.returns, {
+        name = annotation.name,
+        types = annotation.types,
+        nilable = annotation.nilable,
+        description = annotation.description,
+      })
+    end
+  end
+  -- TODO: add overloads
+  return insert(self.methods, method)
 end
 
 ---@param chunks string[][]
 local function parse(chunks)
   assert(type(chunks) == 'table', 'bad argument #1 to parse (expected table)')
-  local rtn = {}
+  local section = Section.new()
+  local namespace = {}
   local variables = {}
-  local section = {}
 
   for _, chunk in ipairs(chunks) do
     local parsed_chunk = parseChunk(chunk)
@@ -452,17 +514,17 @@ local function parse(chunks)
       if parsed_chunk.terminator.namespace then
         if section.type then
           warning('a section was detected before a namespace was found!')
-          section = flushSection(section, rtn)
+          section = section:flushSection(namespace)
         end
-        makeText(section, parsed_chunk)
+        section:makeText(parsed_chunk)
       elseif parsed_chunk.terminator.class
       and parsed_chunk.terminator.section then
-        section = flushSection(section, rtn)
-        makeClass(section, parsed_chunk)
-        assignVariables(parsed_chunk.lua, section, variables)
+        section = section:flushSection(namespace)
+        section:makeClass(parsed_chunk)
+        section:assignVariables(parsed_chunk.lua, variables)
       elseif parsed_chunk.terminator.section then
-        section = flushSection(section, rtn)
-        makeText(section, parsed_chunk)
+        section = section:flushSection(namespace)
+        section:makeText(parsed_chunk)
       end
       goto continue
     elseif not section.type then
@@ -475,50 +537,15 @@ local function parse(chunks)
     if parsed_chunk.type == 'alias' then
       insert(section.aliases, parsed_chunk.value)
     elseif parsed_chunk.lua[1] and parsed_chunk.lua[1]:match('^%s*function') then
-      -- note: the language server only respects the first declaration as a proper cast
-      local func_ast = defs.functions:match(parsed_chunk.lua[1])
-      if not func_ast then
-        warning('failed to parse function declaration, skipping: "%s"', parsed_chunk.lua[1])
-        goto continue
-      end
-
-      local method = {
-        name = func_ast.name,
-        description = parsed_chunk.description,
-        method_form = func_ast.isMethod and (func_ast.class .. ':' .. func_ast.name) or nil,
-        params = {},
-        returns = {},
-        overloads = {},
-      }
-
-      for _, annotation in ipairs(parsed_chunk.annotations) do
-        if annotation.tag == 'param' then
-          p(123, annotation)
-          insert(method.params, {
-            name = annotation.name,
-            type = annotation.type,
-            optional = annotation.optional,
-            description = annotation.description,
-          })
-        elseif annotation.tag == 'return' then
-          insert(method.returns, {
-            name = annotation.name,
-            types = annotation.types,
-            nilable = annotation.nilable,
-            description = annotation.description,
-          })
-        end
-      end
-
-      insert(section.methods, method)
+      section:addMethod(parsed_chunk)
     end
     -- TODO MAIN 3: parse function groups, classes methods and overloads
 
     ::continue::
   end
-  flushSection(section, rtn)
+  section:flushSection(namespace)
 
-  return rtn
+  return namespace
 end
 
 return {

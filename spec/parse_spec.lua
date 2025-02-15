@@ -35,6 +35,6 @@ local tbl = {}
 local parse = require 'parser'.parse
 
 local rtn = parse(chunks)
--- print '----------------------'
--- print(require('inspect').inspect(rtn))
--- print '----------------------'
+print '----------------------'
+print(require('inspect').inspect(rtn))
+print '----------------------'

@@ -46,7 +46,7 @@ defs.name = [[
 ]]
 
 defs.var = [[
-  var <- %s* %name (%s* '.' %s* var)? %s*
+  var <- %s* {%name (%s* '.' %s* var)?} %s*
 ]]
 
 defs.ret = [[
