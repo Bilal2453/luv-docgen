@@ -1,5 +1,4 @@
-
-local chunks = require'scanner' [==[
+local chunks = require('scanner') [==[
 ---The main section of this entire world.
 ---@section Main
 ---Contains the class of the main universe in the main galaxy.
@@ -29,12 +28,107 @@ function cat:meow(duration) end
 
 ]==]
 
----@class test: table
-local tbl = {}
+local expected_tree = {
+  {
+    type = "class",
+    name = "*universe.Main_Milkyway-Galaxy",
+    title = "Main",
+    description = "The main section of this entire world.\nContains the class of the main universe in the main galaxy.\nSurprise surprise, it has been all tables all the time!",
+    parents = { "table" },
+    aliases = {
+      {
+        name = "short-alias.important*",
+        tag = "alias",
+        types = {
+          {
+            type = "table[]"
+          }
+        }
+      },
+      {
+        name = "long-alias.less_important",
+        tag = "alias",
+        types = {
+          {
+            description = "used when the world is shattering",
+            type = '"CRITICAL"'
+          },
+          {
+            description = "the worm is invading the universe :3!",
+            type = "3"
+          },
+          {
+            description = "^|^",
+            type = "|"
+          }
+        }
+      }
+    },
+    methods = {
+      {
+        description = "initialize a sub-universe, fill it with cats!",
+        name = "new",
+        overloads = {},
+        params = {
+          {
+            description = "The Cat's Name",
+            name = "name",
+            optional = false,
+            type = { "string" }
+          }
+        },
+        returns = {
+          {
+            name = "",
+            nilable = false,
+            types = { "{[string]: integer}" }
+          },
+          {
+            name = "error_msg",
+            nilable = true,
+            types = { "string", "nil" }
+          },
+          {
+            name = "",
+            nilable = true,
+            types = { "long-alias.less_important", "nil" }
+          }
+        }
+      },
+      {
+        description = "start galaxy forming, the longer the meowing the more galaxies going to form!",
+        method_form = "cat:meow",
+        name = "meow",
+        overloads = {},
+        params = {
+          {
+            description = "Defaults to 42",
+            name = "meow",
+            optional = false,
+            type = { "number", "nil" }
+          }
+        },
+        returns = {
+          {
+            name = "success",
+            nilable = false,
+            types = { "boolean" }
+          },
+          {
+            name = "error_msg",
+            nilable = true,
+            types = { "string", "nil" }
+          }
+        }
+      },
+    },
+  }
+}
 
-local parse = require 'parser'.parse
 
-local rtn = parse(chunks)
-print '----------------------'
-print(require('inspect').inspect(rtn))
-print '----------------------'
+local parse = require('parser').parse
+assert = require('luassert')
+
+local parsed_tree = parse(chunks)
+assert.same(expected_tree, parsed_tree)
+

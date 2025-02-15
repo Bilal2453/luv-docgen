@@ -79,8 +79,11 @@ defs.functions = [[
   args <- %s* '(' %s* ({ %name } (%s* ',' %s* { %name })*)? %s* ')' %s*
 ]]
 
--- p(defs.functions:match('function cat.new(a, b, c) end'))
--- p(defs.functions:match('function dog:new(a, b, c) end'))
--- os.exit()
+-- DEBUGGING --
+--[[
+  p(defs.functions:match('function cat.new(a, b, c) end'))
+  p(defs.functions:match('function dog:new(a, b, c) end'))
+  os.exit()
+--]]
 
 return defs

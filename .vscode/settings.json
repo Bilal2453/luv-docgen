@@ -1,6 +1,7 @@
 {
   "Lua.workspace.library": [
-    "${addons}/luvit/module/library"
+    "${addons}/luvit/module/library",
+    "${addons}/luassert/module/library"
   ],
   "Lua.workspace.checkThirdParty": false
 }
