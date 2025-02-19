@@ -65,8 +65,8 @@ There are 4 stages that needs to be done:
   - [x] parsing text sections.
   - [x] parsing classes (without methods).
   - [x] parsing aliases.
-  - [*] parsing methods and functions.
-  - [ ] parsing overloads.
+  - [x] parsing methods and functions.
+  - [*] parsing overloads.
 
 - [ ] Preprocessing.
 
@@ -89,7 +89,7 @@ For example the following block has two chunks
 function magic1(foo) end
 object.magicalMethod = magic1
 
-another_assignment = true -- This is NOT part of the previous chunk because it is seperated by two line endings
+another_assignment = true -- This is NOT part of the previous chunk because it is separated by two line endings
 
 ---This is the 2nd chunk!
 ---This chunk has two lines only. The minimum lines a chunk can have is 1.
