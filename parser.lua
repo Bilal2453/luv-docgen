@@ -397,6 +397,7 @@ local function parseChunk(chunk)
 end
 
 ---@class Section
+---@field namespace Namespace
 local Section = {}
 
 ---@class ClassSection: Section
@@ -448,11 +449,11 @@ end
 
 ---Ran when a type annotation comes before a variable declaration,
 ---such as @class and methods/functions definitions.
-function Section:assignVariables(lines, variables)
+function Section:assignVariables(lines)
   for _, line in ipairs(lines) do
     local assignment = defs.assignment:match(line)
     if assignment then
-      variables[assignment.var] = self
+      self.namespace.variables[assignment.var] = self
     end
   end
 end
@@ -474,8 +475,9 @@ function Section:addMethod(parsed_chunk)
     method_form = func_ast.isMethod and (func_ast.class .. ':' .. func_ast.name) or nil,
     params = {},
     returns = {},
-    overloads = {},
   }
+
+  method.overloads = {}
 
   for _, annotation in ipairs(parsed_chunk.annotations) do
     if annotation.tag == 'param' then
@@ -498,12 +500,45 @@ function Section:addMethod(parsed_chunk)
   return insert(self.methods, method)
 end
 
+---@class Namespace
+---@field sections Section[]
+---@field variables table
+---@field methods_map table
+local Namespace = {}
+
+function Namespace.new()
+  return setmetatable({
+    sections = {},
+    variables = {},
+    methods_map = {},
+  }, {
+    __index = Namespace
+  })
+end
+
+function Namespace:newSection()
+  local section = Section.new()
+  section.namespace = self
+  insert(self.sections, section)
+  return section
+end
+
+function Namespace:finalizeSections()
+  local sections = {}
+  for _, section in ipairs(self.sections) do
+    section.namespace = nil
+    if next(section) then
+      insert(sections, section)
+    end
+  end
+  return sections
+end
+
 ---@param chunks string[][]
 local function parse(chunks)
   assert(type(chunks) == 'table', 'bad argument #1 to parse (expected table)')
-  local section = Section.new()
-  local namespace = {}
-  local variables = {}
+  local namespace = Namespace.new()
+  local section = namespace:newSection()
 
   for _, chunk in ipairs(chunks) do
     local parsed_chunk = parseChunk(chunk)
@@ -514,16 +549,16 @@ local function parse(chunks)
       if parsed_chunk.terminator.namespace then
         if section.type then
           warning('a section was detected before a namespace was found!')
-          section = section:flushSection(namespace)
+          section = namespace:newSection()
         end
         section:makeText(parsed_chunk)
       elseif parsed_chunk.terminator.class
       and parsed_chunk.terminator.section then
-        section = section:flushSection(namespace)
+        section = namespace:newSection()
         section:makeClass(parsed_chunk)
-        section:assignVariables(parsed_chunk.lua, variables)
+        section:assignVariables(parsed_chunk.lua)
       elseif parsed_chunk.terminator.section then
-        section = section:flushSection(namespace)
+        section = namespace:newSection()
         section:makeText(parsed_chunk)
       end
       goto continue
@@ -543,9 +578,8 @@ local function parse(chunks)
 
     ::continue::
   end
-  section:flushSection(namespace)
 
-  return namespace
+  return namespace:finalizeSections()
 end
 
 return {

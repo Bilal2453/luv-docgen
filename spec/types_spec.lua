@@ -64,5 +64,3 @@ do
     },
   })
 end
-
-os.exit(0)
