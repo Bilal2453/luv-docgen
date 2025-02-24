@@ -22,9 +22,13 @@ local cat = {}
 function cat.new(name) end
 
 ---start galaxy forming, the longer the meowing the more galaxies going to form!
----@param meow number? # Defaults to 42
+---@param duration number? # Defaults to 42
 ---@return boolean success, string? error_msg
 function cat:meow(duration) end
+---@param duration number
+---@param pitch number
+---@return boolean success, string? error_msg
+function cat:meow(duration, pitch) end
 
 ]==]
 
@@ -99,12 +103,42 @@ local expected_tree = {
         description = "start galaxy forming, the longer the meowing the more galaxies going to form!",
         method_form = "cat:meow",
         name = "meow",
-        overloads = {},
+        overloads = {
+          {
+            name = "meow",
+            description = "",
+            method_form = "cat:meow",
+            params = {
+              {
+                name = "duration",
+                type = { "number" },
+                optional = false,
+              },
+              {
+                name = "pitch",
+                type = { "number" },
+                optional = false,
+              },
+            },
+            returns = {
+              {
+                name = "success",
+                nilable = false,
+                types = { "boolean" },
+              },
+              {
+                name = "error_msg",
+                nilable = true,
+                types = { "string", "nil" },
+              },
+            },
+          },
+        },
         params = {
           {
             description = "Defaults to 42",
-            name = "meow",
-            optional = false,
+            name = "duration",
+            optional = false, -- TODO: FIXME: this should be true
             type = { "number", "nil" }
           }
         },
@@ -112,14 +146,14 @@ local expected_tree = {
           {
             name = "success",
             nilable = false,
-            types = { "boolean" }
+            types = { "boolean" },
           },
           {
             name = "error_msg",
             nilable = true,
-            types = { "string", "nil" }
-          }
-        }
+            types = { "string", "nil" },
+          },
+        },
       },
     },
   }

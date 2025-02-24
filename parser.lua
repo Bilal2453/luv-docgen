@@ -406,7 +406,7 @@ local Section = {}
 ---@field title string
 ---@field parents string[]
 ---@field aliases table[]
----@field methods table[]
+---@field methods Method[]
 ---@field description string
 
 ---@class TextSection: Section
@@ -458,17 +458,26 @@ function Section:assignVariables(lines)
   end
 end
 
+---@class Method
+---@field name string
+---@field description string
+---@field method_form? string
+---@field params table[]
+---@field returns table[]
+---@field overloads? table[]
 function Section:addMethod(parsed_chunk)
   if not self.methods then
     return
   end
 
   -- note: the language server only respects the first declaration as a proper cast
+  -- so we ignore the rest, might later want to parse other assignments
   local func_ast = defs.functions:match(parsed_chunk.lua[1])
   if not func_ast then
     return warning('failed to parse function declaration, skipping: "%s"', parsed_chunk.lua[1])
   end
 
+  ---@type Method
   local method = {
     name = func_ast.name,
     description = parsed_chunk.description,
@@ -477,8 +486,17 @@ function Section:addMethod(parsed_chunk)
     returns = {},
   }
 
-  method.overloads = {}
+  -- should this be an overload?
+  local method_container
+  if self.namespace.methods_map[method.name] then
+    method_container = assert(self.namespace.methods_map[method.name].overloads)
+  else
+    method_container = self.methods
+    method.overloads = {}
+    self.namespace.methods_map[method.name] = method
+  end
 
+  -- handle parameters and returns
   for _, annotation in ipairs(parsed_chunk.annotations) do
     if annotation.tag == 'param' then
       insert(method.params, {
@@ -496,14 +514,14 @@ function Section:addMethod(parsed_chunk)
       })
     end
   end
-  -- TODO: add overloads
-  return insert(self.methods, method)
+
+  return insert(method_container, method)
 end
 
 ---@class Namespace
 ---@field sections Section[]
 ---@field variables table
----@field methods_map table
+---@field methods_map {[string]: Method}
 local Namespace = {}
 
 function Namespace.new()
