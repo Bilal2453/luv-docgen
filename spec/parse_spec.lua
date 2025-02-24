@@ -22,7 +22,7 @@ local cat = {}
 function cat.new(name) end
 
 ---start galaxy forming, the longer the meowing the more galaxies going to form!
----@param duration number? # Defaults to 42
+---@param duration? number # Defaults to 42
 ---@return boolean success, string? error_msg
 function cat:meow(duration) end
 ---@param duration number
@@ -138,8 +138,8 @@ local expected_tree = {
           {
             description = "Defaults to 42",
             name = "duration",
-            optional = false, -- TODO: FIXME: this should be true
-            type = { "number", "nil" }
+            optional = true,
+            type = { "number" }
           }
         },
         returns = {

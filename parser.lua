@@ -592,7 +592,7 @@ local function parse(chunks)
     elseif parsed_chunk.lua[1] and parsed_chunk.lua[1]:match('^%s*function') then
       section:addMethod(parsed_chunk)
     end
-    -- TODO MAIN 3: parse function groups and overloads
+    -- TODO MAIN 3: parse function groups
 
     ::continue::
   end
