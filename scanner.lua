@@ -1,44 +1,31 @@
+-- Depends on LPeg.
+
 -- Scan the input into annotation sections
 -- this is a first run of this scanner
 -- the aim is by the end of this to have a scanner
 -- the works for all of luvit-meta.
--- Depends on LPeg.
 
 -- The scanner works on chunks of annotations
 -- a chunk of annotation is any number of adjacent lines
 -- starting with three dashes `---` followed by
 -- any number of Lua code, often function definition.
 -- The next chunk starts at the next three dashes.
--- For example the following block has two chunks
---[[
+-- For examples see spec/scanner_spec.lua.
 
----This is a magical description
----of a secret function!
----@param foo string
-function magic1(foo) end
-object.magicalMethod = magic1
-
----This is the 2nd chunk!
----This chunk has two lines only.
-
--- this is not a chunk because it doesn't begin with three dashes ---
-function ignored() end
-]]
-
+-- Specs:
 -- Lines inside a single chunk MUST NOT be separated
 -- by more than one line ending.
-
+--
 -- A line ending character MUST be `\n`.
-
+--
 -- Chunks MUST be separated by two or more line endings.
-
+--
 -- There MUST exists a trailing line ending at the end of the string
 -- of the annotations (at the end the annotations file).
-
+--
 -- The order in which the chunks are defined is always preserved.
 
--- TODO: a rundown of the scanning process
--- expected inputs and outputs
+-- TODO: C comments support
 
 local compile = require('re').compile
 

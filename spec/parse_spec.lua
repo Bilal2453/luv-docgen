@@ -30,7 +30,16 @@ function cat:meow(duration) end
 ---@return boolean success, string? error_msg
 function cat:meow(duration, pitch) end
 
+---@section
+---@class kitten: *universe.Main_Milkyway-Galaxy
+local kitten = {}
+
+---@return boolean success, string? error_msg
+function kitten:meow() end
 ]==]
+
+-- TODO: section is not being identified unless an explicit @section is added, is that the intended behavior?
+-- TODO: the test is not passing.
 
 local expected_tree = {
   {
@@ -156,7 +165,35 @@ local expected_tree = {
         },
       },
     },
-  }
+  },
+  {
+    type = "class",
+    name = "kitten",
+    parents = { "*universe.Main_Milkyway-Galaxy" },
+    description = "",
+    aliases = {},
+    methods = {
+      {
+        description = "",
+        method_form = "kitten:meow",
+        name = "meow",
+        overloads = {},
+        params = {},
+        returns = {
+          {
+            name = "success",
+            nilable = false,
+            types = { "boolean" },
+          },
+          {
+            name = "error_msg",
+            nilable = true,
+            types = { "string", "nil" },
+          },
+        },
+      },
+    },
+  },
 }
 
 
@@ -164,5 +201,6 @@ local parse = require('parser').parse
 assert = require('luassert')
 
 local parsed_tree = parse(chunks)
+p(parsed_tree[2])
 assert.same(expected_tree, parsed_tree)
 

@@ -397,7 +397,7 @@ local function parseChunk(chunk)
 end
 
 ---@class Section
----@field namespace Namespace
+---@field meta {namespace: Namespace, methods_map: {[string]: Method}}
 local Section = {}
 
 ---@class ClassSection: Section
@@ -417,7 +417,11 @@ local Section = {}
 
 ---@return Section
 function Section.new()
-  return setmetatable({}, {__index = Section})
+  return setmetatable({
+    meta = {},
+  }, {
+    __index = Section
+  })
 end
 
 function Section:makeText(chunk)
@@ -437,6 +441,8 @@ function Section:makeClass(chunk)
   self.aliases = {}
   self.methods = {}
   self.description = chunk.description
+  self.meta.namespace.classes_map[self.name] = self
+  self.meta.methods_map = {}
 end
 
 ---@return Section
@@ -453,7 +459,7 @@ function Section:assignVariables(lines)
   for _, line in ipairs(lines) do
     local assignment = defs.assignment:match(line)
     if assignment then
-      self.namespace.variables[assignment.var] = self
+      self.meta.namespace.variables[assignment.var] = self
     end
   end
 end
@@ -488,12 +494,12 @@ function Section:addMethod(parsed_chunk)
 
   -- should this be an overload?
   local method_container
-  if self.namespace.methods_map[method.name] then
-    method_container = assert(self.namespace.methods_map[method.name].overloads)
+  if self.meta.methods_map[method.name] then
+    method_container = assert(self.meta.methods_map[method.name].overloads)
   else
     method_container = self.methods
     method.overloads = {}
-    self.namespace.methods_map[method.name] = method
+    self.meta.methods_map[method.name] = method
   end
 
   -- handle parameters and returns
@@ -522,6 +528,7 @@ end
 ---@field sections Section[]
 ---@field variables table
 ---@field methods_map {[string]: Method}
+---@field classes_map {[string]: ClassSection}
 local Namespace = {}
 
 function Namespace.new()
@@ -529,6 +536,7 @@ function Namespace.new()
     sections = {},
     variables = {},
     methods_map = {},
+    classes_map = {},
   }, {
     __index = Namespace
   })
@@ -536,7 +544,7 @@ end
 
 function Namespace:newSection()
   local section = Section.new()
-  section.namespace = self
+  section.meta.namespace = self
   insert(self.sections, section)
   return section
 end
@@ -544,7 +552,7 @@ end
 function Namespace:finalizeSections()
   local sections = {}
   for _, section in ipairs(self.sections) do
-    section.namespace = nil
+    section.meta = nil
     if next(section) then
       insert(sections, section)
     end
